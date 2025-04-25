@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from '../models/user.entity';
-import { Observable, from, throwError } from 'rxjs';
+import { Observable, from, of, throwError } from 'rxjs';
 import { switchMap, map, catchError } from 'rxjs/operators';
 import { User } from '../models/user.interface';
 import { AuthService } from '../../auth/services/auth.service';
@@ -14,7 +15,7 @@ export class UserService {
         @InjectRepository(UserEntity)
         private readonly userRepository: Repository<UserEntity>,
         private authService: AuthService
-    ) {}
+    ) { }
 
     create(user: User): Observable<User> {
         return this.authService.hashPassword(user.password).pipe(
@@ -35,14 +36,48 @@ export class UserService {
         );
     }
 
+    findOrCreateGoogleUser(profile: any): Observable<User> {
+        const email = profile.emails[0].value;
+
+        return this.findByMail(email).pipe(
+            switchMap((existingUser: User) => {
+                // If user exists, return it
+                if (existingUser) {
+                    const { password, ...result } = existingUser;
+                    return of(result);
+                }
+
+                // Create new user if not exists
+                const newUser = new UserEntity();
+                newUser.email = email;
+                newUser.name = `${profile.name.givenName} ${profile.name.familyName}`;
+                newUser.username = email.split('@')[0];
+                // Generate random password for Google users
+                const randomPassword = crypto.randomBytes(32).toString('hex');
+
+                return this.authService.hashPassword(randomPassword).pipe(
+                    switchMap((passwordHash: string) => {
+                        newUser.password = passwordHash;
+                        return from(this.userRepository.save(newUser)).pipe(
+                            map((user: User) => {
+                                const { password, ...result } = user;
+                                return result;
+                            })
+                        );
+                    })
+                );
+            })
+        );
+    }
+
     findOne(id: number): Observable<User> {
         return from(this.userRepository.findOne({ where: { id } })).pipe(
             map((user: User) => {
-            if (user) {
-                const { password, ...result } = user;
-                return result;
-            }
-            return null;
+                if (user) {
+                    const { password, ...result } = user;
+                    return result;
+                }
+                return null;
             })
         );
     }
@@ -50,7 +85,7 @@ export class UserService {
     findAll(): Observable<User[]> {
         return from(this.userRepository.find()).pipe(
             map((users: User[]) => {
-                users.forEach(function (v) {delete v.password});
+                users.forEach(function (v) { delete v.password });
                 return users;
             })
         );
@@ -77,23 +112,27 @@ export class UserService {
                 }
             })
         );
-        
+
     }
 
     validateUser(email: string, password: string): Observable<User> {
         return this.findByMail(email).pipe(
-            switchMap((user: User) =>
-                this.authService.comparePasswords(password, user.password).pipe(
+            switchMap((user: User) => {
+                if (!user) {
+                    return of(null); // Return null if user not found
+                }
+
+                return this.authService.comparePasswords(password, user.password).pipe(
                     map((match: boolean) => {
                         if (match) {
                             const { password, ...result } = user;
                             return result;
                         } else {
-                            throw Error;
+                            throw new Error('Invalid credentials');   
                         }
                     })
                 )
-            )
+            })
         );
     }
 
