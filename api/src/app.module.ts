@@ -6,6 +6,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { GoogleAuthModule } from './auth/google-auth.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
@@ -18,9 +20,13 @@ import { GoogleAuthModule } from './auth/google-auth.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
+    MulterModule.register({
+      dest: './uploads',
+    }),
     UserModule,
     AuthModule,
-    GoogleAuthModule
+    GoogleAuthModule,
+    CloudinaryModule
   ],
   controllers: [AppController],
   providers: [AppService],

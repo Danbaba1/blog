@@ -128,11 +128,22 @@ export class UserService {
                             const { password, ...result } = user;
                             return result;
                         } else {
-                            throw new Error('Invalid credentials');   
+                            throw new Error('Invalid credentials');
                         }
                     })
                 )
             })
+        );
+    }
+
+    // Add this method to your UserService class
+
+    updateUserProfileImage(userId: number, imageUrl: string, imageId: string): Observable<any> {
+        return from(this.userRepository.update(userId, {
+            profileImageUrl: imageUrl,
+            profileImageId: imageId
+        })).pipe(
+            switchMap(() => this.findOne(userId))
         );
     }
 

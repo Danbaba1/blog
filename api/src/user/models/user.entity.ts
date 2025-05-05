@@ -18,6 +18,12 @@ export class UserEntity {
     @Column({nullable: true})
     password: string;
 
+    @Column({nullable: true})
+    profileImageUrl: string;
+
+    @Column({nullable: true})
+    profileImageId: string;
+
     @BeforeInsert()
     emailToLowerCase() {
         this.email = this.email.toLowerCase();
