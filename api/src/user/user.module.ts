@@ -7,6 +7,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { UserEntity } from './models/user.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
     }),
     CloudinaryModule
   ],
-  providers: [UserService],
+  providers: [UserService, JwtAuthGuard],
   controllers: [UserController, UploadController],
   exports: [UserService]
 })

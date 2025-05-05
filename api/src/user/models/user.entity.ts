@@ -24,6 +24,9 @@ export class UserEntity {
     @Column({nullable: true})
     profileImageId: string;
 
+    @Column("simple-array", { nullable: true })
+    previousPasswords: string[]; // Array of hashed passwords
+
     @BeforeInsert()
     emailToLowerCase() {
         this.email = this.email.toLowerCase();

@@ -150,4 +150,46 @@ export class UserService {
     findByMail(email: string): Observable<User> {
         return from(this.userRepository.findOne({ where: { email } }));
     }
+
+    updatePassword(
+        userId: number,
+        newPasswordPlain: string,
+    ): Observable<User> {
+        return from(this.userRepository.findOne({ where: { id: userId } })).pipe(
+            switchMap((user: UserEntity) => {
+                if (!user) {
+                    return throwError(() => new Error('User not found'));
+                }
+
+                return this.authService.checkPreviousPasswords(
+                    newPasswordPlain,
+                    user.previousPasswords || []
+                ).pipe(
+                    switchMap(() => this.updateUserWithNewPassword(user, newPasswordPlain)),
+                    catchError(error => throwError(() => error))
+                );
+            })
+        );
+    }
+
+    private updateUserWithNewPassword(user: UserEntity, newPasswordPlain: string): Observable<User> {
+        return this.authService.hashPassword(newPasswordPlain).pipe(
+            switchMap((newPasswordHash: string) => {
+                user.previousPasswords = [
+                    newPasswordHash,
+                    ...(user.previousPasswords || []).slice(0, 2) // Keep only the last 3 passwords
+                ];
+
+                user.password = newPasswordHash;
+
+                return from(this.userRepository.save(user)).pipe(
+                    map((updatedUser: User) => {
+                        const { password, ...result } = updatedUser;
+                        return result;
+                    }),
+                    catchError(error => throwError(() => error))
+                );
+            })
+        );
+    }
 }

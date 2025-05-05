@@ -12,11 +12,11 @@ import { AuthService } from './services/auth.service';
             inject: [ConfigService],
             useFactory: async (configService: ConfigService) => ({
                 secret: configService.get('JWT_SECRET'),
-                signOptions: { expiresIn: '100s' },
+                signOptions: { expiresIn: '1000s' },
             }),
         }),
     ],
     providers: [AuthService],
-    exports: [AuthService]
+    exports: [AuthService, JwtModule]
 })
 export class AuthModule {}

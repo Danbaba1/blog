@@ -1,8 +1,10 @@
-import { Controller, Post, Body, Get, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Put, UseGuards, Req } from '@nestjs/common';
 import { UserService } from '../service/user.service';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { User } from '../models/user.interface';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { Request } from 'express';
 
 @Controller('users')
 export class UserController {
@@ -46,4 +48,20 @@ export class UserController {
         return this.userService.updateOne(Number(id), user);
     }
 
+    @UseGuards(JwtAuthGuard)
+    @Put(':id/password')
+    updatePassword(
+        @Param('id') id:string,
+        @Body() passwordData: { newPassword: string },
+        @Req() req: Request
+    ): Observable<User | Object> {
+        if (req.user && req.user.id !== Number(id)) {
+            return of({ error: 'Forbidden: You can only update your own password.', statusCode: 403 });
+        }
+
+        return this.userService.updatePassword(Number(id), passwordData.newPassword).pipe(
+            map((user: User) => user),
+            catchError(err => of({ error: err.message }))
+        );
+    }
 }
